@@ -177,7 +177,7 @@ async function runMethod(addr, method, args=[]) {
 const callNum = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readNumber();
 const callBig = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readBigNumber();
 const callStr = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readCell().beginParse().loadStringTail();
-const callAddr = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readAddress().toString();
+const callAddr = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readAddress().toString({ testOnly:true, bounceable:false });
 const shortAddr = (s) => s.length > 12 ? (s.slice(0,4)+'…'+s.slice(-4)) : s;
 
 async function readPotentType() {
