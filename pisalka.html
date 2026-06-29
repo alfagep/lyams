@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ЛЯМС · писалка (testnet)</title>
+<style>
+  body { margin:0; background:#0f1020; color:#e8e8f0; font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:32px 20px 64px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  .sub { color:#9aa0c0; margin:0 0 20px; font-size:14px; }
+  .badge { display:inline-block; background:#2a2c4a; color:#9aa0c0; border-radius:999px; padding:2px 10px; font-size:12px; }
+  .card { background:#1a1b2e; border:1px solid #2a2c4a; border-radius:16px; padding:22px; margin:16px 0; }
+  .ok { color:#4ade80; font-weight:600; }
+  .err { color:#f87171; }
+  .addr { color:#7c8cff; word-break:break-all; font-size:13px; }
+  #tc-button { margin:8px 0 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ЛЯМС · писалка <span class="badge">testnet</span></h1>
+  <p class="sub">Шаг 1 — подключи свой тестовый кошелёк (Tonkeeper, testnet).</p>
+
+  <div id="tc-button"></div>
+  <div id="status" class="card sub">Загружаю TON Connect…</div>
+</div>
+
+<script type="module">
+const status = document.getElementById('status');
+try {
+  const { TonConnectUI } = await import('https://esm.sh/@tonconnect/ui@2');
+
+  const tcUI = new TonConnectUI({
+    manifestUrl: new URL('tonconnect-manifest.json', location.href).href,
+    buttonRootId: 'tc-button',
+  });
+
+  status.textContent = 'Кошелёк не подключён. Нажми кнопку выше → выбери Tonkeeper → подтверди в кошельке.';
+
+  tcUI.onStatusChange((w) => {
+    if (w && w.account) {
+      const chain = w.account.chain; // '-3' = testnet, '-239' = mainnet
+      const net = chain === '-3' ? 'TESTNET ✓' : (chain === '-239' ? 'MAINNET (внимание!)' : chain);
+      status.innerHTML =
+        '<div class="ok">✓ Кошелёк подключён</div>' +
+        '<div class="addr">' + w.account.address + '</div>' +
+        '<div class="sub">сеть: ' + net + '</div>';
+    } else {
+      status.textContent = 'Кошелёк не подключён.';
+    }
+  });
+} catch (e) {
+  status.innerHTML = '<span class="err">Ошибка загрузки TON Connect: ' +
+    String(e).replace(/[<>&]/g,'') + '</span>';
+}
+</script>
+</body>
+</html>
