@@ -34,8 +34,12 @@
   <div id="status" class="card sub">Загружаю TON Connect…</div>
 
   <div id="form" class="card hidden">
-    <label for="word">Слово (дифидент)</label>
+    <label for="word">Слово (дефидент)</label>
     <input id="word" placeholder="например: свобода" autocomplete="off">
+    <div id="hint" class="sub" style="margin-top:8px"></div>
+    <label class="row" style="display:flex;align-items:center;margin-top:12px;cursor:pointer">
+      <input type="checkbox" id="authorial" style="width:auto;margin-right:8px"> Авторское — это моё слово-коайн (авторство за мной)
+    </label>
     <button id="go" class="go">✍ Внести слово в реестр AGEP</button>
     <div id="result" class="sub" style="margin-top:14px"></div>
   </div>
@@ -51,8 +55,34 @@ const form = document.getElementById('form');
 const result = document.getElementById('result');
 const goBtn = document.getElementById('go');
 const wordInput = document.getElementById('word');
+const authorialChk = document.getElementById('authorial');
+const hintEl = document.getElementById('hint');
 
-const REGISTRY = 'kQDCYA_6tCfa250wiC5BR3sY_1Nv_fgda4iP13dB8lHX3scT';
+const REGISTRY = 'kQC5sRm8rsYxbikX-9rqqcdwerg46p1DCHM0FVH98p1RiOpq';
+
+// живая ПОДСКАЗКА (не вердикт): встречается ли слово в Викисловаре/Википедии
+let hintTimer = null;
+wordInput && wordInput.addEventListener('input', () => {
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => lookupHint(wordInput.value.trim()), 500);
+});
+async function lookupHint(word) {
+  if (!word) { hintEl.textContent = ''; return; }
+  hintEl.textContent = 'Проверяю в словаре…';
+  try {
+    const enc = encodeURIComponent(word);
+    const [wikt, wiki] = await Promise.all([
+      fetch(`https://ru.wiktionary.org/w/api.php?action=query&titles=${enc}&format=json&origin=*`).then(r=>r.json()),
+      fetch(`https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${enc}&srlimit=1&format=json&origin=*`).then(r=>r.json()),
+    ]);
+    const inWikt = !Object.values(wikt.query.pages)[0].missing;
+    const hits = (wiki.query && wiki.query.search) ? wiki.query.search.length : 0;
+    if (inWikt || hits > 0)
+      hintEl.innerHTML = '📖 встречается в Викисловаре/Википедии → похоже на <b>общее</b> слово (галочку обычно НЕ ставь)';
+    else
+      hintEl.innerHTML = '🆕 в Викисловаре/Википедии не нашлось → возможно <b>коайн</b> (если слово твоё — поставь «авторское»)';
+  } catch (e) { hintEl.textContent = '(словарь недоступен — подсказки нет)'; }
+}
 
 try {
   const { TonConnectUI } = await import('https://esm.sh/@tonconnect/ui@2');
@@ -63,10 +93,11 @@ try {
     buttonRootId: 'tc-button',
   });
 
-  // опкод RegisterWord = 0x52010001; поле word: string → ref (формат выверен по ABI)
-  function registerWordBody(word) {
+  // опкод RegisterWord = 0x52010001; word: string → ref, authorial: bool → 1 бит (формат выверен дампом)
+  function registerWordBody(word, authorial) {
     return beginCell()
       .storeUint(0x52010001, 32)
+      .storeUint(authorial ? 1 : 0, 1)
       .storeRef(beginCell().storeStringTail(word).endCell())
       .endCell();
   }
@@ -92,7 +123,8 @@ try {
     goBtn.disabled = true;
     result.textContent = 'Подтверди транзакцию в кошельке…';
     try {
-      const body = registerWordBody(word);
+      const authorial = authorialChk.checked;
+      const body = registerWordBody(word, authorial);
       await tcUI.sendTransaction({
         validUntil: Math.floor(Date.now() / 1000) + 300,
         network: '-3', // testnet
@@ -103,8 +135,8 @@ try {
         }],
       });
       result.innerHTML = '<span class="ok">✓ Отправлено и подписано!</span> Слово «' +
-        word.replace(/[<>&]/g,'') + '» идёт в реестр. Через ~10 сек открой читалку.';
-      wordInput.value = '';
+        word.replace(/[<>&]/g,'') + '» (' + (authorial ? 'авторское' : 'общее') + ') идёт в реестр. Через ~10 сек открой читалку.';
+      wordInput.value = ''; authorialChk.checked = false; hintEl.textContent = '';
     } catch (e) {
       result.innerHTML = '<span class="err">Не отправлено: ' + String(e).replace(/[<>&]/g,'') + '</span>';
     } finally {
