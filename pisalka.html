@@ -5,70 +5,82 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ЛЯМС · писалка (testnet)</title>
 <style>
-  body { margin:0; background:#0f1020; color:#e8e8f0; font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif; }
+  :root { --bg:#0f1020; --card:#1a1b2e; --ink:#e8e8f0; --muted:#9aa0c0; --accent:#7c8cff; --ok:#4ade80; --no:#f87171; --line:#2a2c4a; --inset:#14152a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif; }
   .wrap { max-width:760px; margin:0 auto; padding:32px 20px 64px; }
   h1 { font-size:24px; margin:0 0 4px; }
-  .sub { color:#9aa0c0; margin:0 0 20px; font-size:14px; }
-  .badge { display:inline-block; background:#2a2c4a; color:#9aa0c0; border-radius:999px; padding:2px 10px; font-size:12px; }
-  .card { background:#1a1b2e; border:1px solid #2a2c4a; border-radius:16px; padding:22px; margin:16px 0; }
-  .ok { color:#4ade80; font-weight:600; }
-  .err { color:#f87171; }
-  .addr { color:#7c8cff; word-break:break-all; font-size:13px; }
+  .sub { color:var(--muted); font-size:14px; }
+  .badge { display:inline-block; background:var(--line); color:var(--muted); border-radius:999px; padding:2px 10px; font-size:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px; margin:16px 0; }
+  .ok { color:var(--ok); font-weight:600; }
+  .err { color:var(--no); }
+  .addr { color:var(--accent); word-break:break-all; font-size:13px; }
   #tc-button { margin:8px 0 16px; }
-  label { display:block; color:#9aa0c0; font-size:13px; margin:12px 0 4px; }
-  input { width:100%; box-sizing:border-box; background:#14152a; border:1px solid #2a2c4a; border-radius:10px;
-          color:#e8e8f0; padding:12px 14px; font-size:16px; }
-  button.go { margin-top:16px; background:#7c8cff; color:#0f1020; border:0; border-radius:12px;
+  label { display:block; color:var(--muted); font-size:13px; margin:12px 0 4px; }
+  input[type=text], textarea { width:100%; background:var(--inset); border:1px solid var(--line); border-radius:10px;
+          color:var(--ink); padding:12px 14px; font-size:16px; font-family:inherit; }
+  textarea { min-height:90px; resize:vertical; }
+  button.go { margin-top:16px; background:var(--accent); color:var(--bg); border:0; border-radius:12px;
               padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; }
   button.go:disabled { opacity:.5; cursor:default; }
   .hidden { display:none; }
-  a { color:#7c8cff; }
+  a { color:var(--accent); }
+  .hint { color:var(--muted); font-size:13px; margin-top:8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>ЛЯМС · писалка <span class="badge">testnet</span></h1>
-  <p class="sub">Подключи тестовый кошелёк и впиши слово — оно ляжет в реестр AGEP, подписанное тобой.</p>
+  <p class="sub">Внеси слово (дефидент) и дай ему меру (дефиницию) — оба ляжут в реестр AGEP, подписанные тобой.</p>
 
   <div id="tc-button"></div>
   <div id="status" class="card sub">Загружаю TON Connect…</div>
 
-  <div id="form" class="card hidden">
+  <!-- ШАГ 1: СЛОВО -->
+  <div id="form1" class="card hidden">
     <label for="word">Слово (дефидент)</label>
-    <input id="word" placeholder="например: свобода" autocomplete="off">
-    <div id="hint" class="sub" style="margin-top:8px"></div>
+    <input type="text" id="word" placeholder="" autocomplete="off">
+    <div id="hint" class="hint"></div>
     <label class="row" style="display:flex;align-items:center;margin-top:12px;cursor:pointer">
       <input type="checkbox" id="authorial" style="width:auto;margin-right:8px"> Авторское — это моё слово-коайн (авторство за мной)
     </label>
-    <button id="go" class="go">✍ Внести слово в реестр AGEP</button>
-    <div id="result" class="sub" style="margin-top:14px"></div>
+    <button id="go1" class="go">→ Внести слово</button>
+    <div id="res1" class="hint"></div>
   </div>
 
-  <p class="sub" style="margin-top:24px">
-    После записи открой <a href="./" target="_blank">читалку</a> — слово появится там.
-  </p>
+  <!-- ШАГ 2: МЕРА -->
+  <div id="form2" class="card hidden">
+    <div id="forWord" class="sub"></div>
+    <label for="def">Мера (дефиниция) — только смысл, без повтора слова</label>
+    <textarea id="def" placeholder="например: динамическое множество согласованных норм и граней…"></textarea>
+    <button id="go2" class="go">✍ Опубликовать меру</button>
+    <button id="another" class="go" style="background:transparent;color:var(--accent);border:1px solid var(--accent)">+ другое слово</button>
+    <div id="res2" class="hint"></div>
+  </div>
+
+  <p class="sub" style="margin-top:24px">После записи открой <a href="./" target="_blank">читалку</a>.</p>
 </div>
 
 <script type="module">
-const status = document.getElementById('status');
-const form = document.getElementById('form');
-const result = document.getElementById('result');
-const goBtn = document.getElementById('go');
-const wordInput = document.getElementById('word');
-const authorialChk = document.getElementById('authorial');
-const hintEl = document.getElementById('hint');
-
 const REGISTRY = 'kQC5sRm8rsYxbikX-9rqqcdwerg46p1DCHM0FVH98p1RiOpq';
+const OP_REGISTER = 0x52010001;
+const OP_PUBLISH  = 0x52010002;
 
-// живая ПОДСКАЗКА (не вердикт): встречается ли слово в Викисловаре/Википедии
+const $ = (id) => document.getElementById(id);
+const intArg = (v) => ({ type:'int', value: BigInt(v) });
+const escapeHtml = (s) => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let tcUI, beginCell, client, reg;
+let curWord = null, curId = 0;
+
+// живая ПОДСКАЗКА (не вердикт)
 let hintTimer = null;
-wordInput && wordInput.addEventListener('input', () => {
-  clearTimeout(hintTimer);
-  hintTimer = setTimeout(() => lookupHint(wordInput.value.trim()), 500);
-});
+$('word').addEventListener('input', () => { clearTimeout(hintTimer); hintTimer = setTimeout(()=>lookupHint($('word').value.trim()), 500); });
 async function lookupHint(word) {
-  if (!word) { hintEl.textContent = ''; return; }
-  hintEl.textContent = 'Проверяю в словаре…';
+  const hint = $('hint');
+  if (!word) { hint.textContent=''; return; }
+  hint.textContent = 'Проверяю в словаре…';
   try {
     const enc = encodeURIComponent(word);
     const [wikt, wiki] = await Promise.all([
@@ -77,74 +89,124 @@ async function lookupHint(word) {
     ]);
     const inWikt = !Object.values(wikt.query.pages)[0].missing;
     const hits = (wiki.query && wiki.query.search) ? wiki.query.search.length : 0;
-    if (inWikt || hits > 0)
-      hintEl.innerHTML = '📖 встречается в Викисловаре/Википедии → похоже на <b>общее</b> слово (галочку обычно НЕ ставь)';
-    else
-      hintEl.innerHTML = '🆕 в Викисловаре/Википедии не нашлось → возможно <b>коайн</b> (если слово твоё — поставь «авторское»)';
-  } catch (e) { hintEl.textContent = '(словарь недоступен — подсказки нет)'; }
+    hint.innerHTML = (inWikt || hits>0)
+      ? '📖 встречается в Викисловаре/Википедии → похоже на <b>общее</b> (галочку обычно НЕ ставь)'
+      : '🆕 не нашлось → возможно <b>коайн</b> (если слово твоё — поставь «авторское»)';
+  } catch(e) { hint.textContent = '(словарь недоступен)'; }
 }
 
+// чтение реестра (троттлинг + повтор при 429)
+let lastCall = 0;
+async function throttle(){ const w=Math.max(0,1300-(Date.now()-lastCall)); if(w) await new Promise(r=>setTimeout(r,w)); lastCall=Date.now(); }
+async function runMethod(method, args=[]) {
+  for (let i=0;i<6;i++){ await throttle();
+    try { return await client.runMethod(reg, method, args); }
+    catch(e){ if(String(e).includes('429')&&i<5){ await new Promise(r=>setTimeout(r,2000*(i+1))); continue; } throw e; } }
+}
+const callNum = async (m,a=[]) => (await runMethod(m,a)).stack.readNumber();
+const callStr = async (m,a=[]) => (await runMethod(m,a)).stack.readCell().beginParse().loadStringTail();
+
+async function findWordId(word) {
+  const nextId = Number(await callNum('nextId'));
+  for (let id = nextId-1; id >= 1; id--) {
+    try { if ((await callStr('getWordText',[intArg(id)])) === word) return id; } catch(e){}
+  }
+  return 0;
+}
+
+function regBody(word, authorial) {
+  return beginCell().storeUint(OP_REGISTER,32).storeUint(authorial?1:0,1)
+    .storeRef(beginCell().storeStringTail(word).endCell()).endCell();
+}
+function pubBody(wordId, text) {
+  return beginCell().storeUint(OP_PUBLISH,32).storeUint(BigInt(wordId),64)
+    .storeRef(beginCell().storeStringTail(text).endCell()).endCell();
+}
+async function send(body, amount) {
+  await tcUI.sendTransaction({ validUntil: Math.floor(Date.now()/1000)+400, network:'-3',
+    messages:[{ address: REGISTRY, amount, payload: body.toBoc().toString('base64') }] });
+}
+async function waitFor(fn, tries=40, delay=3500){ for(let i=0;i<tries;i++){ try{ if(await fn()) return true; }catch(e){} await new Promise(r=>setTimeout(r,delay)); } return false; }
+
 try {
-  const { TonConnectUI } = await import('https://esm.sh/@tonconnect/ui@2');
-  const { beginCell } = await import('https://esm.sh/@ton/core@0');
+  const ui = await import('https://esm.sh/@tonconnect/ui@2');
+  const core = await import('https://esm.sh/@ton/core@0');
+  const ton = await import('https://esm.sh/@ton/ton@15');
+  beginCell = core.beginCell;
+  client = new ton.TonClient({ endpoint:'https://testnet.toncenter.com/api/v2/jsonRPC' });
+  reg = core.Address.parse(REGISTRY);
 
-  const tcUI = new TonConnectUI({
-    manifestUrl: new URL('tonconnect-manifest.json', location.href).href,
-    buttonRootId: 'tc-button',
-  });
-
-  // опкод RegisterWord = 0x52010001; word: string → ref, authorial: bool → 1 бит (формат выверен дампом)
-  function registerWordBody(word, authorial) {
-    return beginCell()
-      .storeUint(0x52010001, 32)
-      .storeUint(authorial ? 1 : 0, 1)
-      .storeRef(beginCell().storeStringTail(word).endCell())
-      .endCell();
-  }
-
-  function setConnected(w) {
-    if (w && w.account) {
-      const net = w.account.chain === '-3' ? 'TESTNET ✓' : ('chain ' + w.account.chain + ' ⚠');
-      status.innerHTML = '<div class="ok">✓ Кошелёк подключён</div>' +
-        '<div class="addr">' + w.account.address + '</div>' +
-        '<div class="sub">сеть: ' + net + '</div>';
-      form.classList.remove('hidden');
-    } else {
-      status.textContent = 'Кошелёк не подключён. Нажми кнопку выше.';
-      form.classList.add('hidden');
-    }
-  }
-  setConnected(tcUI.wallet);
+  tcUI = new ui.TonConnectUI({ manifestUrl: new URL('tonconnect-manifest.json', location.href).href, buttonRootId:'tc-button' });
   tcUI.onStatusChange(setConnected);
+  setConnected(tcUI.wallet);
 
-  goBtn.addEventListener('click', async () => {
-    const word = wordInput.value.trim();
-    if (!word) { result.innerHTML = '<span class="err">Впиши слово.</span>'; return; }
-    goBtn.disabled = true;
-    result.textContent = 'Подтверди транзакцию в кошельке…';
+  // ШАГ 1 → слово
+  $('go1').onclick = async () => {
+    const word = $('word').value.trim();
+    if (!word) { $('res1').innerHTML='<span class="err">Впиши слово.</span>'; return; }
+    $('go1').disabled = true;
     try {
-      const authorial = authorialChk.checked;
-      const body = registerWordBody(word, authorial);
-      await tcUI.sendTransaction({
-        validUntil: Math.floor(Date.now() / 1000) + 300,
-        network: '-3', // testnet
-        messages: [{
-          address: REGISTRY,
-          amount: '100000000', // 0.1 TON на газ+хранение
-          payload: body.toBoc().toString('base64'),
-        }],
-      });
-      result.innerHTML = '<span class="ok">✓ Отправлено и подписано!</span> Слово «' +
-        word.replace(/[<>&]/g,'') + '» (' + (authorial ? 'авторское' : 'общее') + ') идёт в реестр. Через ~10 сек открой читалку.';
-      wordInput.value = ''; authorialChk.checked = false; hintEl.textContent = '';
-    } catch (e) {
-      result.innerHTML = '<span class="err">Не отправлено: ' + String(e).replace(/[<>&]/g,'') + '</span>';
-    } finally {
-      goBtn.disabled = false;
-    }
-  });
+      $('res1').textContent = 'Проверяю, есть ли слово в реестре…';
+      let id = await findWordId(word);
+      if (id > 0) {
+        toStep2(word, id, 'Слово уже в реестре — добавь меру.');
+      } else {
+        const authorial = $('authorial').checked;
+        $('res1').textContent = 'Подтверди в кошельке: внести слово…';
+        await send(regBody(word, authorial), '100000000');
+        $('res1').textContent = 'Отправлено. Жду появления слова в реестре…';
+        const ok = await waitFor(async () => (await findWordId(word)) > 0);
+        if (!ok) { $('res1').innerHTML='<span class="err">Пока не вижу слово. Обнови позже.</span>'; $('go1').disabled=false; return; }
+        id = await findWordId(word);
+        toStep2(word, id, 'Слово внесено ('+(authorial?'авторское':'общее')+'). Теперь дай меру.');
+      }
+    } catch(e){ $('res1').innerHTML='<span class="err">Ошибка: '+escapeHtml(String(e))+'</span>'; }
+    $('go1').disabled = false;
+  };
+
+  // ШАГ 2 → мера
+  $('go2').onclick = async () => {
+    const text = $('def').value.trim();
+    if (!text) { $('res2').innerHTML='<span class="err">Впиши меру.</span>'; return; }
+    $('go2').disabled = true;
+    try {
+      const before = Number(await callNum('defCount',[intArg(curId)]));
+      $('res2').textContent = 'Подтверди в кошельке: опубликовать меру…';
+      await send(pubBody(curId, text), '120000000');
+      $('res2').textContent = 'Отправлено. Жду появления меры в реестре…';
+      const ok = await waitFor(async () => Number(await callNum('defCount',[intArg(curId)])) > before);
+      $('res2').innerHTML = ok
+        ? '<span class="ok">✓ Мера опубликована!</span> Открой <a href="./" target="_blank">читалку</a>.'
+        : '<span class="err">Пока не вижу меру. Обнови позже.</span>';
+    } catch(e){ $('res2').innerHTML='<span class="err">Ошибка: '+escapeHtml(String(e))+'</span>'; }
+    $('go2').disabled = false;
+  };
+
+  $('another').onclick = () => {
+    $('form2').classList.add('hidden'); $('form1').classList.remove('hidden');
+    $('word').value=''; $('def').value=''; $('hint').textContent=''; $('res1').textContent=''; $('res2').textContent=''; $('authorial').checked=false;
+  };
+
 } catch (e) {
-  status.innerHTML = '<span class="err">Ошибка загрузки: ' + String(e).replace(/[<>&]/g,'') + '</span>';
+  $('status').innerHTML = '<span class="err">Ошибка загрузки: '+escapeHtml(String(e))+'</span>';
+}
+
+function setConnected(w) {
+  if (w && w.account) {
+    const net = w.account.chain === '-3' ? 'TESTNET ✓' : ('chain '+w.account.chain+' ⚠');
+    $('status').innerHTML = '<div class="ok">✓ Кошелёк подключён</div><div class="addr">'+escapeHtml(w.account.address)+'</div><div class="sub">сеть: '+net+'</div>';
+    $('form1').classList.remove('hidden');
+  } else {
+    $('status').textContent = 'Кошелёк не подключён. Нажми кнопку выше.';
+    $('form1').classList.add('hidden'); $('form2').classList.add('hidden');
+  }
+}
+
+function toStep2(word, id, msg) {
+  curWord = word; curId = id;
+  $('form1').classList.add('hidden');
+  $('form2').classList.remove('hidden');
+  $('forWord').innerHTML = '<b>'+escapeHtml(word)+'</b> · слово №'+id+' — '+escapeHtml(msg);
 }
 </script>
 </body>
