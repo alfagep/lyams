@@ -80,7 +80,7 @@ async function callBig(addr, method, args=[]) {
   return (await runMethod(addr, method, args)).stack.readBigNumber();
 }
 async function callAddr(addr, method, args=[]) {
-  return (await runMethod(addr, method, args)).stack.readAddress().toString();
+  return (await runMethod(addr, method, args)).stack.readAddress().toString({ testOnly:true, bounceable:false });
 }
 const intArg = (v) => ({ type: 'int', value: BigInt(v) });
 const shortAddr = (s) => (s && s.length > 12) ? (s.slice(0,4)+'…'+s.slice(-4)) : s;
