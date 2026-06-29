@@ -175,16 +175,21 @@ try {
       await send(pubBody(curId, text), '120000000');
       $('res2').textContent = 'Отправлено. Жду появления меры в реестре…';
       const ok = await waitFor(async () => Number(await callNum('defCount',[intArg(curId)])) > before);
-      $('res2').innerHTML = ok
-        ? '<span class="ok">✓ Мера опубликована!</span> Открой <a href="./" target="_blank">читалку</a>.'
-        : '<span class="err">Пока не вижу меру. Обнови позже.</span>';
-    } catch(e){ $('res2').innerHTML='<span class="err">Ошибка: '+escapeHtml(String(e))+'</span>'; }
-    $('go2').disabled = false;
+      if (ok) {
+        $('res2').innerHTML = '<span class="ok">✓ Мера опубликована!</span> Открой <a href="./" target="_blank">читалку</a> или жми «+ другое слово».';
+        $('def').disabled = true;            // блок: не дать повторно отправить и заплатить ещё раз
+        // кнопка go2 остаётся выключенной
+      } else {
+        $('res2').innerHTML = '<span class="err">Пока не вижу меру. Обнови позже.</span>';
+        $('go2').disabled = false;
+      }
+    } catch(e){ $('res2').innerHTML='<span class="err">Ошибка: '+escapeHtml(String(e))+'</span>'; $('go2').disabled = false; }
   };
 
   $('another').onclick = () => {
     $('form2').classList.add('hidden'); $('form1').classList.remove('hidden');
     $('word').value=''; $('def').value=''; $('hint').textContent=''; $('res1').textContent=''; $('res2').textContent=''; $('authorial').checked=false;
+    $('def').disabled=false; $('go2').disabled=false;   // вернуть поле в рабочее состояние для след. слова
   };
 
 } catch (e) {
