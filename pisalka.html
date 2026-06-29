@@ -173,17 +173,13 @@ try {
       const before = Number(await callNum('defCount',[intArg(curId)]));
       $('res2').textContent = 'Подтверди в кошельке: опубликовать меру…';
       await send(pubBody(curId, text), '120000000');
-      $('res2').textContent = 'Отправлено. Жду появления меры в реестре…';
+      $('def').disabled = true;   // ПОДПИСАНО → блок сразу (gas потрачен, защита от двойной оплаты); go2 остаётся выключен
+      $('res2').textContent = 'Отправлено и подписано. Жду появления меры в реестре…';
       const ok = await waitFor(async () => Number(await callNum('defCount',[intArg(curId)])) > before);
-      if (ok) {
-        $('res2').innerHTML = '<span class="ok">✓ Мера опубликована!</span> Открой <a href="./" target="_blank">читалку</a> или жми «+ другое слово».';
-        $('def').disabled = true;            // блок: не дать повторно отправить и заплатить ещё раз
-        // кнопка go2 остаётся выключенной
-      } else {
-        $('res2').innerHTML = '<span class="err">Пока не вижу меру. Обнови позже.</span>';
-        $('go2').disabled = false;
-      }
-    } catch(e){ $('res2').innerHTML='<span class="err">Ошибка: '+escapeHtml(String(e))+'</span>'; $('go2').disabled = false; }
+      $('res2').innerHTML = ok
+        ? '<span class="ok">✓ Мера опубликована!</span> Открой <a href="./" target="_blank">читалку</a> или жми «+ другое слово».'
+        : '<span class="ok">✓ Отправлено и подписано.</span> Мера скоро появится — проверь читалку. Для следующего слова жми «+ другое слово».';
+    } catch(e){ $('res2').innerHTML='<span class="err">Не отправлено: '+escapeHtml(String(e))+'</span>'; $('go2').disabled = false; }
   };
 
   $('another').onclick = () => {
