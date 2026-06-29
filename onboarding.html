@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IusWallet · вход потента (testnet)</title>
+<style>
+  :root { --bg:#0f1020; --card:#1a1b2e; --ink:#e8e8f0; --muted:#9aa0c0; --accent:#7c8cff; --ok:#4ade80; --no:#f87171; --line:#2a2c4a; --inset:#14152a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  h2 { font-size:18px; margin:0 0 10px; }
+  .sub { color:var(--muted); font-size:14px; }
+  .badge { display:inline-block; background:var(--line); color:var(--muted); border-radius:999px; padding:2px 10px; font-size:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px; margin:16px 0; }
+  .card.done { border-color:#2e6b46; }
+  .card.locked { opacity:.45; }
+  .addr { color:var(--accent); word-break:break-all; font-size:12px; }
+  .ok { color:var(--ok); font-weight:600; }
+  .no { color:var(--no); }
+  .step-no { display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background:var(--line); color:var(--ink); font-size:13px; margin-right:8px; }
+  .step-no.ok { background:#2e6b46; color:#fff; }
+  label { display:block; color:var(--muted); font-size:13px; margin:14px 0 4px; }
+  input[type=text], textarea { width:100%; background:var(--inset); border:1px solid var(--line); border-radius:10px; color:var(--ink); padding:12px 14px; font-size:16px; font-family:inherit; }
+  textarea { min-height:80px; resize:vertical; }
+  button { background:var(--accent); color:var(--bg); border:0; border-radius:12px; padding:11px 18px; font-size:15px; font-weight:600; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  button:disabled { opacity:.45; cursor:default; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .choice { flex:1; min-width:200px; text-align:left; padding:16px; background:var(--inset); border:1px solid var(--line); }
+  .choice.sel { border-color:var(--accent); }
+  .def { background:var(--inset); border-left:3px solid var(--line); border-radius:8px; padding:12px 14px; margin:8px 0; white-space:pre-wrap; cursor:pointer; }
+  .def.sel { border-left-color:var(--accent); background:#191b35; }
+  .def .who { color:#6b6f95; font-size:11px; margin-top:6px; word-break:break-all; }
+  .hint { color:var(--muted); font-size:13px; margin-top:8px; }
+  .status { color:var(--muted); font-size:14px; margin-top:10px; min-height:20px; }
+  .hidden { display:none; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>IusWallet · вход потента <span class="badge">testnet</span></h1>
+  <p class="sub">Ты не получаешь смысл даром — ты <b>измеряешь основания</b>: кто ты, что есть Человек, Человечество, Свобода. Это твой ЛЯМС — счёт&nbsp;1.</p>
+
+  <div id="tc-button" style="margin:18px 0 8px"></div>
+  <div id="conn" class="card sub">Загружаю TON&nbsp;Connect…</div>
+
+  <!-- ШАГ 1: ЛИЧНОСТЬ -->
+  <div id="cardIdent" class="card hidden">
+    <h2><span id="snIdent" class="step-no">1</span>Мера себя — имя и тип потента</h2>
+    <div id="identBody">
+      <label>Кто ты?</label>
+      <div class="row">
+        <button class="choice" id="chHum">🧑 <b>HumPotent</b><br><span class="sub">человек — измеряет основания сознанием</span></button>
+        <button class="choice" id="chAi">🤖 <b>AiPotent</b><br><span class="sub">ИИ — впускается через реферал HumPotent</span></button>
+      </div>
+
+      <div id="capWrap" class="hidden">
+        <label>Проверка человека (капча — заглушка, настоящая позже)</label>
+        <div class="row">
+          <span class="sub">Подтверди осознанно: отметь, что ты человек.</span>
+        </div>
+        <label class="row" style="cursor:pointer"><input type="checkbox" id="capChk" style="width:auto"> &nbsp;Я — человек, вхожу осознанно (HumPotent)</label>
+      </div>
+
+      <label for="name">Имя (мера себя — самоидентификация)</label>
+      <input type="text" id="name" placeholder="например: Ava Vladimir Dra Ezerskiy" autocomplete="off">
+      <div class="hint">Имя — правовой атрибут. Хранится с историей: переименование дописывает, старое не стирается.</div>
+      <div class="row" style="margin-top:14px">
+        <button id="goIdent" disabled>✍ Объявить себя · развернуть мой ЛЯМС</button>
+      </div>
+      <div id="stIdent" class="status"></div>
+    </div>
+    <div id="identDone" class="hidden"></div>
+  </div>
+
+  <!-- ШАГ 2: 3 ОБЯЗАТЕЛЬНЫЕ МЕРЫ -->
+  <div id="cardWords" class="card locked">
+    <h2><span id="snWords" class="step-no">2</span>Обязательные меры оснований</h2>
+    <p class="sub">Для каждого слова: прочти существующие меры → <b>усынови</b> созвучную (вес ↑) или <b>дай свою</b>. Так складывается созвучие на основаниях.</p>
+    <div id="wordsBody"></div>
+  </div>
+
+  <div id="finale" class="card hidden">
+    <h2>✓ Инициация пройдена</h2>
+    <p>Твой ЛЯМС несёт меру себя и трёх оснований. Открой <a href="./" target="_blank">читалку</a> или <a id="myLink" target="_blank">свой ЛЯМС в обозревателе</a>.</p>
+  </div>
+</div>
+
+<script type="module">
+const REGISTRY = "kQDCYA_6tCfa250wiC5BR3sY_1Nv_fgda4iP13dB8lHX3scT";
+// скомпилированный код контракта Lyams (build/Lyams.json)
+const LYAMS_CODE_B64 = "te6ccgECFAEAA4gAART/APSkE/S88sgLAQIBYgIDA1TQ+JGRMOAg1ywiuAgAFOMC1ywiuAgAHOMC1ywiuAgAJOMCMIQPAccA8vQEBQYCASAKCwH+Me1E0PpI1gdvAAHTB/QEkyFus44VAdD0BJ3U0x9GZm8Cb4wkxwAV5jAB6DEib4hYuvKJ9AX4kiTHBfLgZATTP9cL/8jL/0AVgED0QwLI+lLOIm+Ic21UciGpBo4fAcj0AFMhtghRIqEinVNwb4FvIgPMEssfAaTkAckCoeQwMQcB/jHtRND6SNMHbwAB0wf0BJMhbrOOFQHQ9ASd1NMfRmZvAm+MJMcAFeYwAegxIm+IWLryifiSJMcF8uBkAvLQZQPTB9dMFPgjbwJvjALI+lITywchb4hzbVRyIakGjh8ByPQAUyG2CFEioSKdU2BvgW8iA8wSyx8BpOQByQKh5DAIAf4x7UTQ+kjWB28AAdMH9ASTIW6zjhUB0PQEndTTH0ZmbwJvjCTHABXmMAHoMSJviFi68on4kiTHBfLgZATXTPgjbwJvjALI+lLOIW+Ic21UciGpBo4fAcj0AFMhtghRIqEinVNgb4FvIgPMEssfAaTkAckCoeQwMTPPCwf0AM7JCQAYNM8LBxL0APQAye1UABYxM88LB/QAzsntVAAE7VQCASAMDQCHvAufaiaH0kGOmDmLeAAOmD+gJJkLdZxwqA6HoCTuppj6MzN4E3xhJjgArzGAD0GJE3xBmBXXlE+gJowCB6B3lE6f/owAg7mA7tRND6SDHTBzFvAAHTB/QEkyFus44VAdD0BJ3U0x9GZm8Cb4wkxwAV5jAB6DEib4gzArryifQE0YBA9A5voTGAIBIA4PAgEgEBEAh7c7naiaH0kGOmDmLeAAOmD+gJJkLdZxwqA6HoCTuppj6MzN4E3xhJjgArzGAD0GJE3xCxdeUT6AhjokDfEUrfAt5EYQAgEgEhMAebDeO1E0PpIMdMHMW8AAdMH9ASTIW6zjhUB0PQEndTTH0ZmbwJvjCTHABXmMAHoMSJviFi68on0BDHRb4iAAda6O9qJofSRpg5i3gADpg/oCSZC3WccKgOh6Ak7qaY+jMzeBN8YSY4AK8xgA9BiRN8QZgV15RPoCGOjAAHWuD3aiaH0kGOmDt4AA6YP6AkmQt1nHCoDoegJO6mmPozM3gTfGEmOACvMYAPQYkTfEGYFdeUT6AhjowA==";
+
+const WORDS = [
+  { id: 1, word: "Человек" },
+  { id: 2, word: "Свобода" },
+  { id: 3, word: "Человечество" },
+];
+
+// опкоды (сверены по контрактам)
+const OP_SET_IDENTITY = 0x57010003;
+const OP_SET_ENTRY     = 0x57010002;
+const OP_PUBLISH_DEF    = 0x52010002;
+
+const conn = document.getElementById('conn');
+const intArg = (v) => ({ type: 'int', value: BigInt(v) });
+
+let TC, CORE, TON;
+let tcUI, client, regAddr;
+let owner = null;        // Address подключённого кошелька
+let myLyamsAddr = null;  // Address личного ЛЯМСа
+let potentType = 0;
+let chosenType = 0;      // выбор в UI до подписи
+
+try {
+  TC   = await import('https://esm.sh/@tonconnect/ui@2');
+  CORE = await import('https://esm.sh/@ton/core@0');
+  TON  = await import('https://esm.sh/@ton/ton@15');
+
+  client  = new TON.TonClient({ endpoint: "https://testnet.toncenter.com/api/v2/jsonRPC" });
+  regAddr = CORE.Address.parse(REGISTRY);
+
+  tcUI = new TC.TonConnectUI({
+    manifestUrl: new URL('tonconnect-manifest.json', location.href).href,
+    buttonRootId: 'tc-button',
+  });
+
+  tcUI.onStatusChange(onWallet);
+  if (tcUI.wallet) onWallet(tcUI.wallet);
+  else conn.textContent = 'Подключи тестовый кошелёк (кнопка выше).';
+
+  bindIdentityUI();
+} catch (e) {
+  conn.innerHTML = '<span class="no">Ошибка загрузки: ' + esc(String(e)) + '</span>';
+}
+
+// ---------- адрес личного ЛЯМСа (self-deploy) ----------
+const LYAMS_CODE = () => CORE.Cell.fromBase64(LYAMS_CODE_B64);
+function lyamsData(ownerAddr) {
+  // пустой storage = адрес(267) + 18 нулевых бит (potentType=0 + пустой names + пустой map) — выверено дампом
+  return CORE.beginCell().storeAddress(ownerAddr).storeUint(0, 18).endCell();
+}
+function lyamsStateInitCell(ownerAddr) {
+  // StateInit TLB: split(Maybe 0) special(Maybe 0) code(Maybe^) data(Maybe^) library(HashmapE 0)
+  return CORE.beginCell()
+    .storeBit(0).storeBit(0)
+    .storeMaybeRef(LYAMS_CODE())
+    .storeMaybeRef(lyamsData(ownerAddr))
+    .storeBit(0)
+    .endCell();
+}
+function lyamsAddressFor(ownerAddr) {
+  return new CORE.Address(0, lyamsStateInitCell(ownerAddr).hash());
+}
+
+// ---------- чтение из сети (троттлинг + повтор при 429) ----------
+let lastCall = 0;
+async function throttle() {
+  const wait = Math.max(0, 1300 - (Date.now() - lastCall));
+  if (wait) await new Promise(r => setTimeout(r, wait));
+  lastCall = Date.now();
+}
+async function runMethod(addr, method, args=[]) {
+  for (let i = 0; i < 6; i++) {
+    await throttle();
+    try { return await client.runMethod(addr, method, args); }
+    catch (e) {
+      if (String(e).includes('429') && i < 5) { await new Promise(r => setTimeout(r, 2000*(i+1))); continue; }
+      throw e;
+    }
+  }
+}
+const callNum = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readNumber();
+const callBig = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readBigNumber();
+const callStr = async (a,m,x=[]) => (await runMethod(a,m,x)).stack.readCell().beginParse().loadStringTail();
+
+async function readPotentType() {
+  try { return Number(await callNum(myLyamsAddr, 'potentType')); }
+  catch (e) { return 0; } // контракт ещё не развёрнут
+}
+async function hasWord(id) {
+  try { return Number(await callNum(myLyamsAddr, 'hasWord', [intArg(id)])) !== 0; }
+  catch (e) { return false; }
+}
+
+// ---------- тела сообщений ----------
+function bodySetIdentity(pt, name) {
+  return CORE.beginCell().storeUint(OP_SET_IDENTITY, 32).storeUint(pt, 8)
+    .storeRef(CORE.beginCell().storeStringTail(name).endCell()).endCell();
+}
+function bodySetEntry(wordId, defHashBig) {
+  return CORE.beginCell().storeUint(OP_SET_ENTRY, 32).storeUint(BigInt(wordId), 64).storeUint(defHashBig, 256).endCell();
+}
+function bodyPublishDef(wordId, text) {
+  return CORE.beginCell().storeUint(OP_PUBLISH_DEF, 32).storeUint(BigInt(wordId), 64)
+    .storeRef(CORE.beginCell().storeStringTail(text).endCell()).endCell();
+}
+
+async function sendTo(addrStr, body, amount, stateInitCell) {
+  const msg = { address: addrStr, amount, payload: body.toBoc().toString('base64') };
+  if (stateInitCell) msg.stateInit = stateInitCell.toBoc().toString('base64');
+  await tcUI.sendTransaction({
+    validUntil: Math.floor(Date.now()/1000) + 600,
+    network: '-3',
+    messages: [msg],
+  });
+}
+// строки адреса: для деплоя — небаунсабельный (0Q), потом — баунсабельный (kQ)
+const sLyamsNB = () => myLyamsAddr.toString({ testOnly:true, bounceable:false });
+const sLyamsB  = () => myLyamsAddr.toString({ testOnly:true, bounceable:true });
+
+async function waitFor(fn, tries=40, delay=3500) {
+  for (let i=0;i<tries;i++){ try { if (await fn()) return true; } catch(e){} await new Promise(r=>setTimeout(r, delay)); }
+  return false;
+}
+
+// ---------- подключение ----------
+async function onWallet(w) {
+  if (!(w && w.account)) {
+    owner = null; conn.textContent = 'Кошелёк не подключён.';
+    document.getElementById('cardIdent').classList.add('hidden');
+    return;
+  }
+  owner = CORE.Address.parse(w.account.address);
+  myLyamsAddr = lyamsAddressFor(owner);
+  const net = w.account.chain === '-3' ? 'TESTNET ✓' : ('chain '+w.account.chain+' ⚠ (нужен testnet)');
+  conn.innerHTML = '<div class="ok">✓ Кошелёк подключён</div>'
+    + '<div class="addr">кошелёк: ' + esc(w.account.address) + '</div>'
+    + '<div class="addr">твой ЛЯМС: ' + esc(sLyamsB()) + '</div>'
+    + '<div class="sub">сеть: ' + net + '</div>';
+  document.getElementById('myLink').href = 'https://testnet.tonviewer.com/' + sLyamsB();
+  document.getElementById('cardIdent').classList.remove('hidden');
+  await refreshAll();
+}
+
+async function refreshAll() {
+  potentType = await readPotentType();
+  if (potentType > 0) {
+    let nm = '';
+    try { nm = await callStr(myLyamsAddr, 'currentName'); } catch(e){}
+    const typeName = potentType === 1 ? 'HumPotent 🧑' : 'AiPotent 🤖';
+    document.getElementById('identBody').classList.add('hidden');
+    const d = document.getElementById('identDone');
+    d.classList.remove('hidden');
+    d.innerHTML = '<span class="ok">✓ Личность объявлена</span> — ' + esc(nm) + ' · ' + typeName;
+    document.getElementById('snIdent').classList.add('ok');
+    document.getElementById('cardIdent').classList.add('done');
+    unlockWords();
+  }
+}
+
+// ---------- ШАГ 1: личность ----------
+function bindIdentityUI() {
+  const chHum = document.getElementById('chHum');
+  const chAi  = document.getElementById('chAi');
+  const capWrap = document.getElementById('capWrap');
+  const capChk = document.getElementById('capChk');
+  const nameI = document.getElementById('name');
+  const goB = document.getElementById('goIdent');
+
+  function recheck() {
+    const named = nameI.value.trim().length > 0;
+    const capOk = chosenType !== 1 || capChk.checked;
+    goB.disabled = !(chosenType !== 0 && named && capOk);
+  }
+  chHum.onclick = () => { chosenType = 1; chHum.classList.add('sel'); chAi.classList.remove('sel'); capWrap.classList.remove('hidden'); recheck(); };
+  chAi.onclick  = () => { chosenType = 2; chAi.classList.add('sel'); chHum.classList.remove('sel'); capWrap.classList.add('hidden'); recheck(); };
+  capChk.onchange = recheck;
+  nameI.oninput = recheck;
+
+  goB.onclick = async () => {
+    const name = nameI.value.trim();
+    const st = document.getElementById('stIdent');
+    goB.disabled = true;
+    st.textContent = 'Подтверди в кошельке: развернуть ЛЯМС + объявить имя…';
+    try {
+      // деплой stateInit + SetIdentity одной транзакцией (отправитель = owner = проходит К1)
+      await sendTo(sLyamsNB(), bodySetIdentity(chosenType, name), '150000000', lyamsStateInitCell(owner));
+      st.textContent = 'Отправлено. Жду появления личности в сети (до ~2 мин)…';
+      const ok = await waitFor(async () => (await readPotentType()) > 0);
+      if (ok) { st.innerHTML = '<span class="ok">✓ Личность в сети!</span>'; await refreshAll(); }
+      else { st.innerHTML = '<span class="no">Пока не вижу в сети. Обнови страницу через минуту.</span>'; goB.disabled = false; }
+    } catch (e) {
+      st.innerHTML = '<span class="no">Не отправлено: ' + esc(String(e)) + '</span>'; goB.disabled = false;
+    }
+  };
+}
+
+// ---------- ШАГ 2: три меры ----------
+function unlockWords() {
+  const card = document.getElementById('cardWords');
+  card.classList.remove('locked');
+  document.getElementById('snWords').textContent = '2';
+  renderWords();
+}
+
+async function renderWords() {
+  const body = document.getElementById('wordsBody');
+  body.innerHTML = '<div class="sub">Читаю существующие меры из реестра…</div>';
+  let html = '';
+  let allDone = true;
+  for (const w of WORDS) {
+    const inMy = await hasWord(w.id);
+    if (!inMy) allDone = false;
+    const cnt = Number(await callNum(regAddr, 'defCount', [intArg(w.id)]));
+    const defs = [];
+    for (let i = 0; i < cnt; i++) {
+      const h = await callBig(regAddr, 'definitionAt', [intArg(w.id), intArg(i)]);
+      let text = ''; try { text = await callStr(regAddr, 'getDefinitionText', [intArg(h)]); } catch(e){ text='(не прочитать)'; }
+      defs.push({ h, text });
+    }
+    html += wordCard(w, cnt, defs, inMy);
+  }
+  body.innerHTML = html;
+  WORDS.forEach(w => bindWordCard(w));
+  if (allDone) showFinale();
+}
+
+function wordCard(w, cnt, defs, inMy) {
+  if (inMy) {
+    return '<div class="card done" id="wc'+w.id+'"><b>'+esc(w.word)+'</b> · <span class="ok">✓ мера в твоём ЛЯМСе</span></div>';
+  }
+  let defsHtml = '';
+  defs.forEach((d, i) => {
+    defsHtml += '<div class="def" data-w="'+w.id+'" data-h="'+d.h.toString()+'">'+esc(d.text)
+      + '<div class="who">усыновить эту меру (созвучие)</div></div>';
+  });
+  const noDefs = cnt === 0
+    ? '<div class="hint">В реестре пока нет мер этого слова — <b>ты первый</b>, дай свою.</div>'
+    : '<div class="hint">'+cnt+' мер(ы) в реестре. Усынови созвучную или дай свою.</div>';
+  return '<div class="card" id="wc'+w.id+'">'
+    + '<b>'+esc(w.word)+'</b> <span class="sub">— что есть '+esc(w.word.toLowerCase())+'?</span>'
+    + noDefs + defsHtml
+    + '<label>…или своя мера</label>'
+    + '<textarea id="own'+w.id+'" placeholder="Напиши своё определение «'+esc(w.word)+'»"></textarea>'
+    + '<div class="row" style="margin-top:12px">'
+    +   '<button id="adopt'+w.id+'" class="ghost" disabled>Усыновить выбранную</button>'
+    +   '<button id="mine'+w.id+'">Записать свою меру</button>'
+    + '</div>'
+    + '<div id="st'+w.id+'" class="status"></div>'
+    + '</div>';
+}
+
+function bindWordCard(w) {
+  const card = document.getElementById('wc'+w.id);
+  if (!card) return;
+  const adoptB = document.getElementById('adopt'+w.id);
+  const mineB = document.getElementById('mine'+w.id);
+  if (!adoptB) return; // уже done
+  let selHash = null;
+
+  card.querySelectorAll('.def').forEach(el => {
+    el.onclick = () => {
+      card.querySelectorAll('.def').forEach(e => e.classList.remove('sel'));
+      el.classList.add('sel'); selHash = BigInt(el.dataset.h); adoptB.disabled = false;
+    };
+  });
+
+  adoptB.onclick = async () => {
+    if (selHash === null) return;
+    await adoptOrPublish(w, selHash, null);
+  };
+  mineB.onclick = async () => {
+    const text = document.getElementById('own'+w.id).value.trim();
+    if (!text) { setWS(w, '<span class="no">Впиши свою меру.</span>'); return; }
+    await adoptOrPublish(w, null, text);
+  };
+}
+
+function setWS(w, html){ document.getElementById('st'+w.id).innerHTML = html; }
+
+async function adoptOrPublish(w, adoptHash, ownText) {
+  const adoptB = document.getElementById('adopt'+w.id);
+  const mineB = document.getElementById('mine'+w.id);
+  adoptB.disabled = true; mineB.disabled = true;
+  try {
+    let defHash;
+    if (adoptHash !== null) {
+      defHash = adoptHash; // усыновление — хеш уже есть
+    } else {
+      // своя мера: публикуем в реестр, ждём, читаем новый хеш
+      const before = Number(await callNum(regAddr, 'defCount', [intArg(w.id)]));
+      setWS(w, 'Подтверди в кошельке: публикация меры в реестр…');
+      await sendTo(REGISTRY, bodyPublishDef(w.id, ownText), '120000000', null);
+      setWS(w, 'Опубликовано. Жду появления в реестре…');
+      const grew = await waitFor(async () => Number(await callNum(regAddr,'defCount',[intArg(w.id)])) > before);
+      if (!grew) { setWS(w, '<span class="no">Мера пока не видна в реестре. Обнови позже.</span>'); adoptB.disabled=false; mineB.disabled=false; return; }
+      const after = Number(await callNum(regAddr, 'defCount', [intArg(w.id)]));
+      defHash = await callBig(regAddr, 'definitionAt', [intArg(w.id), intArg(after-1)]);
+    }
+    setWS(w, 'Подтверди в кошельке: запись меры в твой ЛЯМС…');
+    await sendTo(sLyamsB(), bodySetEntry(w.id, defHash), '80000000', null);
+    setWS(w, 'Записано. Жду подтверждения в ЛЯМСе…');
+    const inMy = await waitFor(async () => await hasWord(w.id));
+    if (inMy) { setWS(w, '<span class="ok">✓ мера в твоём ЛЯМСе</span>'); await renderWords(); }
+    else { setWS(w, '<span class="no">Пока не вижу в ЛЯМСе. Обнови позже.</span>'); adoptB.disabled=false; mineB.disabled=false; }
+  } catch (e) {
+    setWS(w, '<span class="no">Ошибка: ' + esc(String(e)) + '</span>'); adoptB.disabled=false; mineB.disabled=false;
+  }
+}
+
+function showFinale(){ document.getElementById('finale').classList.remove('hidden'); }
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+</script>
+</body>
+</html>
