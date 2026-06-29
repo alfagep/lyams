@@ -31,8 +31,7 @@
   <p class="sub">Читает слова и определения прямо из живых контрактов в сети TON. Никакого сервера — данные с блокчейна.</p>
   <div id="out" class="loading">Читаю из сети TON…</div>
   <p class="sub" style="margin-top:28px">
-    Реестр: <a id="lreg" target="_blank"></a><br>
-    ЛЯМС: <a id="llya" target="_blank"></a>
+    Реестр AGEP: <a id="lreg" target="_blank"></a>
   </p>
 </div>
 
@@ -40,17 +39,13 @@
 import { TonClient, Address } from "https://esm.sh/@ton/ton@15";
 
 // живые контракты testnet
-const REGISTRY = "kQDCYA_6tCfa250wiC5BR3sY_1Nv_fgda4iP13dB8lHX3scT";
-const LYAMS    = "kQBMDbMEnA-jvpgJUd2ddaQKx6LVO2-9KX82YNHBTReeW4sZ";
+const REGISTRY = "kQC5sRm8rsYxbikX-9rqqcdwerg46p1DCHM0FVH98p1RiOpq";
 
 document.getElementById('lreg').textContent = REGISTRY;
 document.getElementById('lreg').href = "https://testnet.tonviewer.com/" + REGISTRY;
-document.getElementById('llya').textContent = LYAMS;
-document.getElementById('llya').href = "https://testnet.tonviewer.com/" + LYAMS;
 
 const client = new TonClient({ endpoint: "https://testnet.toncenter.com/api/v2/jsonRPC" });
 const reg = Address.parse(REGISTRY);
-const lya = Address.parse(LYAMS);
 
 const out = document.getElementById('out');
 
@@ -84,7 +79,11 @@ async function callNum(addr, method, args=[]) {
 async function callBig(addr, method, args=[]) {
   return (await runMethod(addr, method, args)).stack.readBigNumber();
 }
+async function callAddr(addr, method, args=[]) {
+  return (await runMethod(addr, method, args)).stack.readAddress().toString();
+}
 const intArg = (v) => ({ type: 'int', value: BigInt(v) });
+const shortAddr = (s) => (s && s.length > 12) ? (s.slice(0,4)+'…'+s.slice(-4)) : s;
 
 async function main() {
   try {
@@ -94,24 +93,24 @@ async function main() {
 
     for (let id = 1; id <= total; id++) {
       const word = await callStr(reg, 'getWordText', [intArg(id)]);
-      const cnt  = await callNum(reg, 'defCount', [intArg(id)]);
-      const inLyams = await callNum(lya, 'hasWord', [intArg(id)]); // -1 = true
+      const cnt  = Number(await callNum(reg, 'defCount', [intArg(id)]));
+      let authorial = false;
+      try { authorial = Number(await callNum(reg, 'isWordAuthorial', [intArg(id)])) !== 0; } catch(e){}
 
-      // показываем определение, ВЫБРАННОЕ в твоём ЛЯМСе (твою меру)
-      let defBlock = '';
-      if (inLyams !== 0) {
-        const dHash = await callBig(lya, 'chosenDefinition', [intArg(id)]);
-        const text  = await callStr(reg, 'getDefinitionText', [intArg(dHash)]);
-        defBlock = `<div class="def">${escapeHtml(text)}</div>`;
+      // показываем ВСЕ меры слова из реестра с автором каждой
+      let defsBlock = '';
+      for (let i = 0; i < cnt; i++) {
+        const h = await callBig(reg, 'definitionAt', [intArg(id), intArg(i)]);
+        let text=''; try { text = await callStr(reg, 'getDefinitionText', [intArg(h)]); } catch(e){ text='(не прочитать)'; }
+        let author=''; try { author = await callAddr(reg, 'getDefinitionAuthor', [intArg(h)]); } catch(e){}
+        defsBlock += `<div class="def">${escapeHtml(text)}<div class="hash">автор меры: ${escapeHtml(shortAddr(author))}</div></div>`;
       }
 
+      const badge = authorial ? '<span class="badge">авторское</span>' : '<span class="badge">общее</span>';
       html += `<div class="card">
-        <div class="word">${escapeHtml(word)}</div>
-        <div class="meta">слово №${id} · вариантов определения в реестре: ${Number(cnt)}</div>
-        ${defBlock}
-        <div class="lyams">${inLyams !== 0
-          ? '<span class="ok">✓ есть в твоём ЛЯМСе</span> — показано твоё выбранное определение'
-          : '<span class="no">— не в твоём ЛЯМСе</span>'}</div>
+        <div class="word">${escapeHtml(word)} ${badge}</div>
+        <div class="meta">слово №${id} · мер в реестре: ${cnt}</div>
+        ${defsBlock || '<div class="sub">мер пока нет — кто-то станет первым</div>'}
       </div>`;
     }
     out.innerHTML = html || '<div class="loading">В реестре пока нет слов.</div>';
