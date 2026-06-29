@@ -15,44 +15,104 @@
   .err { color:#f87171; }
   .addr { color:#7c8cff; word-break:break-all; font-size:13px; }
   #tc-button { margin:8px 0 16px; }
+  label { display:block; color:#9aa0c0; font-size:13px; margin:12px 0 4px; }
+  input { width:100%; box-sizing:border-box; background:#14152a; border:1px solid #2a2c4a; border-radius:10px;
+          color:#e8e8f0; padding:12px 14px; font-size:16px; }
+  button.go { margin-top:16px; background:#7c8cff; color:#0f1020; border:0; border-radius:12px;
+              padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; }
+  button.go:disabled { opacity:.5; cursor:default; }
+  .hidden { display:none; }
+  a { color:#7c8cff; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>ЛЯМС · писалка <span class="badge">testnet</span></h1>
-  <p class="sub">Шаг 1 — подключи свой тестовый кошелёк (Tonkeeper, testnet).</p>
+  <p class="sub">Подключи тестовый кошелёк и впиши слово — оно ляжет в реестр AGEP, подписанное тобой.</p>
 
   <div id="tc-button"></div>
   <div id="status" class="card sub">Загружаю TON Connect…</div>
+
+  <div id="form" class="card hidden">
+    <label for="word">Слово (дифидент)</label>
+    <input id="word" placeholder="например: свобода" autocomplete="off">
+    <button id="go" class="go">✍ Внести слово в реестр AGEP</button>
+    <div id="result" class="sub" style="margin-top:14px"></div>
+  </div>
+
+  <p class="sub" style="margin-top:24px">
+    После записи открой <a href="./" target="_blank">читалку</a> — слово появится там.
+  </p>
 </div>
 
 <script type="module">
 const status = document.getElementById('status');
+const form = document.getElementById('form');
+const result = document.getElementById('result');
+const goBtn = document.getElementById('go');
+const wordInput = document.getElementById('word');
+
+const REGISTRY = 'kQDCYA_6tCfa250wiC5BR3sY_1Nv_fgda4iP13dB8lHX3scT';
+
 try {
   const { TonConnectUI } = await import('https://esm.sh/@tonconnect/ui@2');
+  const { beginCell } = await import('https://esm.sh/@ton/core@0');
 
   const tcUI = new TonConnectUI({
     manifestUrl: new URL('tonconnect-manifest.json', location.href).href,
     buttonRootId: 'tc-button',
   });
 
-  status.textContent = 'Кошелёк не подключён. Нажми кнопку выше → выбери Tonkeeper → подтверди в кошельке.';
+  // опкод RegisterWord = 0x52010001; поле word: string → ref (формат выверен по ABI)
+  function registerWordBody(word) {
+    return beginCell()
+      .storeUint(0x52010001, 32)
+      .storeRef(beginCell().storeStringTail(word).endCell())
+      .endCell();
+  }
 
-  tcUI.onStatusChange((w) => {
+  function setConnected(w) {
     if (w && w.account) {
-      const chain = w.account.chain; // '-3' = testnet, '-239' = mainnet
-      const net = chain === '-3' ? 'TESTNET ✓' : (chain === '-239' ? 'MAINNET (внимание!)' : chain);
-      status.innerHTML =
-        '<div class="ok">✓ Кошелёк подключён</div>' +
+      const net = w.account.chain === '-3' ? 'TESTNET ✓' : ('chain ' + w.account.chain + ' ⚠');
+      status.innerHTML = '<div class="ok">✓ Кошелёк подключён</div>' +
         '<div class="addr">' + w.account.address + '</div>' +
         '<div class="sub">сеть: ' + net + '</div>';
+      form.classList.remove('hidden');
     } else {
-      status.textContent = 'Кошелёк не подключён.';
+      status.textContent = 'Кошелёк не подключён. Нажми кнопку выше.';
+      form.classList.add('hidden');
+    }
+  }
+  setConnected(tcUI.wallet);
+  tcUI.onStatusChange(setConnected);
+
+  goBtn.addEventListener('click', async () => {
+    const word = wordInput.value.trim();
+    if (!word) { result.innerHTML = '<span class="err">Впиши слово.</span>'; return; }
+    goBtn.disabled = true;
+    result.textContent = 'Подтверди транзакцию в кошельке…';
+    try {
+      const body = registerWordBody(word);
+      await tcUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        network: '-3', // testnet
+        messages: [{
+          address: REGISTRY,
+          amount: '100000000', // 0.1 TON на газ+хранение
+          payload: body.toBoc().toString('base64'),
+        }],
+      });
+      result.innerHTML = '<span class="ok">✓ Отправлено и подписано!</span> Слово «' +
+        word.replace(/[<>&]/g,'') + '» идёт в реестр. Через ~10 сек открой читалку.';
+      wordInput.value = '';
+    } catch (e) {
+      result.innerHTML = '<span class="err">Не отправлено: ' + String(e).replace(/[<>&]/g,'') + '</span>';
+    } finally {
+      goBtn.disabled = false;
     }
   });
 } catch (e) {
-  status.innerHTML = '<span class="err">Ошибка загрузки TON Connect: ' +
-    String(e).replace(/[<>&]/g,'') + '</span>';
+  status.innerHTML = '<span class="err">Ошибка загрузки: ' + String(e).replace(/[<>&]/g,'') + '</span>';
 }
 </script>
 </body>
